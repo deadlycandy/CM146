@@ -17,6 +17,7 @@ def dijkstras_shortest_path(initial_position, destination, graph, adj):
         Otherwise, return None.
 
     """
+
     pass
 
 
@@ -31,6 +32,37 @@ def dijkstras_shortest_path_to_all(initial_position, graph, adj):
     Returns:
         A dictionary, mapping destination cells to the cost of a path from the initial_position.
     """
+    #Used to track which nodes are next
+    Q = []
+
+    #Contains the distances and connections between nodes
+    dist = []
+    prev = []
+
+    #For all nodes in graph are set to undefined values and inserts into Q
+    for v in graph:
+        dist[v] = -1
+        prev[v] = -1
+        Q.append(v)
+
+
+    dist[initial_position] = 0
+
+    #Main loop to check all the nodes
+    while len(Q) != 0:
+        u = Q.pop()
+
+        #Calculates the distance to all neighbors
+        for v in adj:
+            alt = dist[u] + dist[v]
+            if alt < dist[v]:
+                dist[v] = alt
+                prev[v] = u
+
+    #debugging print statements
+    print("Distance list: " + dist)
+    print("\nPrevious (Path): " + prev)
+
     pass
 
 
