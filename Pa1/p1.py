@@ -1,4 +1,4 @@
-from p1_support import load_level, show_level, save_level_costs
+import p1_support
 from math import inf, sqrt
 from heapq import heappop, heappush
 
@@ -17,8 +17,53 @@ def dijkstras_shortest_path(initial_position, destination, graph, adj):
         Otherwise, return None.
 
     """
+    # Initialize dictionaries and priority queque
+    pq = []
+    dist = {}
+    prev = {}
 
-    pass
+    # Push all the coordinates into pq and sets distance to None
+    for v in graph['walls']:
+        heappush(pq, v)
+        dist[v] = +inf
+        prev[v] = None
+    for v in graph['spaces']:
+        heappush(pq, v)
+        dist[v] = +inf
+        prev[v] = None
+    for v in graph['waypoints'].values():
+        heappush(pq, v)
+        dist[v] = +inf
+        prev[v] = None
+
+    # Starting point distance
+    dist[initial_position] = 0
+
+    # Runs till nothing left in pq
+    while len(pq) != 0:
+        # Find the neighbors around current vertex
+        u = heappop(pq)
+        adj = navigation_edges(graph, u)
+
+        if u == destination:
+            path = []
+            path.append(destination)
+            _visit = prev[destination]
+            while _visit != initial_position:
+                path.append(_visit)
+                _visit = prev[_visit]
+            path.append(initial_position)
+            path.reverse()
+            return path
+
+        # Run through the distances
+        for v in adj:
+            newDist = v[1] + dist[u]
+            if newDist < dist[v[0]]:
+                dist[v[0]] = newDist
+                prev[v[0]] = u
+
+    return None
 
 
 def dijkstras_shortest_path_to_all(initial_position, graph, adj):
@@ -32,38 +77,35 @@ def dijkstras_shortest_path_to_all(initial_position, graph, adj):
     Returns:
         A dictionary, mapping destination cells to the cost of a path from the initial_position.
     """
-    #Used to track which nodes are next
-    Q = []
+    # Initialize dictionaries and priority queue
+    pq = []
+    dist = {}
+    prev = {}
 
-    #Contains the distances and connections between nodes
-    dist = []
-    prev = []
+    # Starting point distancw
+    prev[initial_position] = None
+    heappush(pq, (0, [initial_position, None, 0]))
 
-    #For all nodes in graph are set to undefined values and inserts into Q
-    for v in graph:
-        dist[v] = -1
-        prev[v] = -1
-        Q.append(v)
+    for v in graph['spaces']:
+        heappush(pq, (+inf, [v, None, graph["spaces"][v]]))
 
+    for v in graph['waypoints'].values():
+        heappush(pq, (+inf, [v, None, 1]))
 
-    dist[initial_position] = 0
-
-    #Main loop to check all the nodes
-    while len(Q) != 0:
-        u = Q.pop()
-
-        #Calculates the distance to all neighbors
-        for v in adj:
-            alt = dist[u] + dist[v]
-            if alt < dist[v]:
-                dist[v] = alt
-                prev[v] = u
-
-    #debugging print statements
-    print("Distance list: " + dist)
-    print("\nPrevious (Path): " + prev)
-
-    pass
+    while len(pq) > 0:
+        # Find the neighbors around current vertex
+        u = heappop(pq)
+        # print('\n U: ', u,"\n")
+        adj = navigation_edges(graph, u[1][0])
+        print("\n",adj,"\n")
+        #
+        #     # Run through the distances
+        #     for v in adj:
+        #         newDist = v[1] + dist[u]
+        #         if newDist < dist[v[0]]:
+        #             dist[v[0]] = newDist
+        #             prev[v[0]] = u
+        # return dist
 
 
 def navigation_edges(level, cell):
@@ -83,7 +125,39 @@ def navigation_edges(level, cell):
              ((1,1), 1.4142135623730951),
              ... ]
     """
-    pass
+    waypointWeight = 1
+    x = cell[0]
+    y = cell[1]
+    adj = []
+
+    if cell in level['spaces'] or cell in level['waypoints'].values():
+
+        neighbors = [(x - 1, y - 1), (x - 1, y), (x - 1, y + 1), (x, y + 1), (x + 1, y + 1), (x + 1, y), (x + 1, y - 1),
+                     (x, y - 1)]
+        for i in range(len(neighbors)):
+            if i % 2 == 0:  # Calculates the diagonal edges
+                if neighbors[i] in level['spaces']:
+                    weight = (sqrt(2) * 0.5 * level['spaces'][cell]) + (sqrt(2) * 0.5 * level['spaces'][neighbors[i]])
+                    adj.append((neighbors[i], weight))
+                elif neighbors[i] in level['walls']:
+                    weight = +inf
+                    adj.append((neighbors[i], weight))
+                else:
+                    weight = (sqrt(2) * 0.5) * level['spaces'][cell] + (sqrt(2) * 0.5) * waypointWeight
+                    adj.append((neighbors[i], weight))
+            else:  # Calculates Non-Diagonal edges
+                if neighbors[i] in level['spaces']:
+                    weight = (0.5 * level['spaces'][cell]) + (0.5 * level['spaces'][neighbors[i]])
+                    adj.append((neighbors[i], weight))
+                elif neighbors[i] in level['walls']:
+                    weight = +inf
+                    adj.append((neighbors[i], weight))
+                else:
+                    weight = (0.5 * level['spaces'][cell]) + (0.5 * waypointWeight)
+                    adj.append((neighbors[i], weight))
+    else:
+        adj.append((cell, +inf))
+    return adj
 
 
 def test_route(filename, src_waypoint, dst_waypoint):
@@ -97,8 +171,8 @@ def test_route(filename, src_waypoint, dst_waypoint):
     """
 
     # Load and display the level.
-    level = load_level(filename)
-    show_level(level)
+    level = p1_support.load_level(filename)
+    p1_support.show_level(level)
 
     # Retrieve the source and destination coordinates from the level.
     src = level['waypoints'][src_waypoint]
@@ -107,13 +181,17 @@ def test_route(filename, src_waypoint, dst_waypoint):
     # Search for and display the path from src to dst.
     path = dijkstras_shortest_path(src, dst, level, navigation_edges)
     if path:
-        show_level(level, path)
+        # Creating output text file
+        outputFile = open("test_maze_path.txt", "w")
+        string = str(path).strip('[]')
+        outputFile.write(string)
+        outputFile.close()
     else:
         print("No path possible!")
 
 
 def cost_to_all_cells(filename, src_waypoint, output_filename):
-    """ Loads a level, calculates the cost to all reachable cells from 
+    """ Loads a level, calculates the cost to all reachable cells from
     src_waypoint, then saves the result in a csv file with name output_filename.
 
     Args:
@@ -122,24 +200,27 @@ def cost_to_all_cells(filename, src_waypoint, output_filename):
         output_filename: The filename for the output csv file.
 
     """
-    
+
     # Load and display the level.
-    level = load_level(filename)
-    show_level(level)
+    level = p1_support.load_level(filename)
+    # p1_support.show_level(level)
 
     # Retrieve the source coordinates from the level.
     src = level['waypoints'][src_waypoint]
-    
+
     # Calculate the cost to all reachable cells from src and save to a csv file.
     costs_to_all_cells = dijkstras_shortest_path_to_all(src, level, navigation_edges)
-    save_level_costs(level, costs_to_all_cells, output_filename)
+    # p1_support.save_level_costs(level, costs_to_all_cells, output_filename)
 
 
 if __name__ == '__main__':
-    filename, src_waypoint, dst_waypoint = 'example.txt', 'a','e'
+    filename, src_waypoint, dst_waypoint = 'example.txt', 'a', 'e'
+    # level = p1_support.load_level(filename)
+    # p1_support.show_level(level)
+    # print(navigation_edges(level, (7,7)))
 
     # Use this function call to find the route between two waypoints.
-    test_route(filename, src_waypoint, dst_waypoint)
+    # test_route(filename, src_waypoint, dst_waypoint)
 
     # Use this function to calculate the cost to all reachable cells from an origin point.
-    cost_to_all_cells(filename, src_waypoint, 'my_costs.csv')
+    cost_to_all_cells(filename, src_waypoint, 'my_maze_costs.csv')
