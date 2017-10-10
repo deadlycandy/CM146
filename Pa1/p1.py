@@ -84,28 +84,37 @@ def dijkstras_shortest_path_to_all(initial_position, graph, adj):
 
     # Starting point distancw
     prev[initial_position] = None
-    heappush(pq, (0, [initial_position, None, 0]))
-
+    heappush(pq, (0, [initial_position,None, 0]))
+    dist[initial_position] = 0
+    # u = heappop(pq)
+    # print(u[0])
+    # print(u[1])
+    # print(u[1])
     for v in graph['spaces']:
         heappush(pq, (+inf, [v, None, graph["spaces"][v]]))
-
+        dist[v] = +inf
     for v in graph['waypoints'].values():
         heappush(pq, (+inf, [v, None, 1]))
+        dist[v] = +inf
 
     while len(pq) > 0:
+    # for i in range(3):
         # Find the neighbors around current vertex
         u = heappop(pq)
+        # print(u)
         # print('\n U: ', u,"\n")
         adj = navigation_edges(graph, u[1][0])
-        print("\n",adj,"\n")
-        #
-        #     # Run through the distances
-        #     for v in adj:
-        #         newDist = v[1] + dist[u]
-        #         if newDist < dist[v[0]]:
-        #             dist[v[0]] = newDist
-        #             prev[v[0]] = u
-        # return dist
+        # Run through the distances
+        for v in adj:
+            newDist = v[1] + u[0]
+            # print('V[1]:', v[1], '\n')
+            # print('u[0]:', u[0], '\n')
+            # print('NewDist:', newDist, '\n')
+            if v[0] in dist:
+                if newDist < dist[v[0]]:
+                    heappush(pq, (newDist, [v[0],u[1][0],v[1]]))
+                    dist[v[0]] = newDist
+    return dist
 
 
 def navigation_edges(level, cell):
@@ -210,7 +219,7 @@ def cost_to_all_cells(filename, src_waypoint, output_filename):
 
     # Calculate the cost to all reachable cells from src and save to a csv file.
     costs_to_all_cells = dijkstras_shortest_path_to_all(src, level, navigation_edges)
-    # p1_support.save_level_costs(level, costs_to_all_cells, output_filename)
+    p1_support.save_level_costs(level, costs_to_all_cells, output_filename)
 
 
 if __name__ == '__main__':
