@@ -45,7 +45,27 @@ def rollout(board, state):
         state:  The state of the game.
 
     """
-    pass
+    me = board.current_player(state)
+    # print("me:", me)
+
+    rollout_state = state
+
+    while True:
+        # if state is the very last
+        if board.is_ended(rollout_state):
+            break
+        rollout_move = random.choice(board.legal_actions(rollout_state))
+        rollout_state = board.next_state(rollout_state, rollout_move)
+
+    # total_score += outcome(board.owned_boxes(rollout_state),
+    #                       board.points_values(rollout_state))
+    final_score = board.points_values(rollout_state)
+
+    # Return value 1: win for bot/me, value 0: loss
+    if final_score[me] == 1:
+        return 1
+    else:
+        return 0
 
 
 def backpropagate(node, won):
@@ -78,6 +98,48 @@ def think(board, state):
 
         # Start at root
         node = root_node
+
+        node = traverse_nodes(node, board, sampled_game, identity_of_bot)
+
+        if len(node.untried_actions) == 0:  # termination condition
+            # check state and winner
+            # here we select the node we want to move to, based on the all the propagation
+            best_ratio = 0
+            selection = None
+            # is this iterating through just the direct children of the node?
+            for childKeys in node.child_nodes.keys(): 
+                child = node.child_nodes.get(childKeys)
+                # heuristic starts here
+                next_state = board.next_state(state, child.parent_action)
+
+                current_dic = board.points_values(state)
+                next_dic = board.points_values(next_state)
+
+                me = board.current_player(state) #if there is some identity problem, initialize these at the top
+                opp = board.current_player(next_state)
+
+                curr_my_points = current_dic[me]
+                curr_opp_points = current_dic[opp]
+
+                # if this next move results in my points going up, set selection to this move
+                if(next_dic[me] > curr_my_points):
+                    selection = childKeys
+                # if this next move results in opponent's points going up, go to the next child.
+                elif(next_dic[opp] > curr_opp_points):
+                    next
+                # need more heuristic for row/column/diagonal matching
+                #board.owned_boxes   
+                # end of heuristic
+                elif child.wins/child.visits >= best_ratio:
+                    best_ratio = child.wins/child.visits
+                    selection = childKeys
+
+        else:
+            # expand, simulate, propagate
+            new_node = expand_leaf(node, board, sampled_game)
+            new_state = board.next_state(sampled_game, new_node.parent_action)
+            end = rollout(board, new_state)
+            backpropagate(new_node, end)
 
         # Do MCTS - This is all you!
 
